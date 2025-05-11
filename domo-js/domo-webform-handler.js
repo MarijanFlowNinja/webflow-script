@@ -1,8 +1,7 @@
 ;(function() {
   // --- HELPERS ---
   function getCookie(name) {
-    const v = `; ${document.cookie}`;
-    const parts = v.split(`; ${name}=`);
+    const parts = (`; ${document.cookie}`).split(`; ${name}=`);
     return parts.length === 2 ? parts.pop().split(';').shift() : "";
   }
   function setCookie(name, value, days) {
@@ -12,7 +11,7 @@
       d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
       expires = "; expires=" + d.toUTCString();
     }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    document.cookie = `${name}=${value || ""}${expires}; path=/`;
   }
   function getUrlParam(name) {
     return new URLSearchParams(window.location.search).get(name) || "";
@@ -28,7 +27,7 @@
     const p = getUrlParam("unique_ffid") || getUrlParam("uniqueFFID");
     if (p) return p;
     const domo = getUrlParam("domo_id") || getCookie("did") || "";
-    return await hashSHA1(crypto.randomUUID() + "|" + domo);
+    return await hashSHA1(`${crypto.randomUUID()}|${domo}`);
   }
   function generateDomoID() {
     const t = Math.floor(Date.now() / 1000);
@@ -51,17 +50,17 @@
     const cb = form.querySelector('input[name="consent"]');
     if (cb) return cb.checked ? 1 : 0;
     const hid = form.querySelector('input[name="sFDCCanadaEmailOptIn1"]');
-    if (hid) {
-      const v = hid.value;
-      return ["1","Yes","true",1,true].includes(v) ? 1 : 0;
-    }
+    if (hid) return ["1","Yes","true",1,true].includes(hid.value) ? 1 : 0;
     return 1;
   }
 
   // --- UINFO COOKIE ---
   function setUInfoCookie(form) {
     const domo = getCookie("did") || "";
-    const getV = name => form.querySelector(`[name="${name}"]`)?.value.trim() || "";
+    const getV = name => {
+      const el = form.querySelector(`[name="${name}"]`);
+      return el ? el.value.trim() : "";
+    };
     const params = new URLSearchParams({
       domoid:    domo,
       firstname: getV("first_name"),
@@ -77,21 +76,11 @@
   // --- POPULATORS ---
   function populateUtmFields(form) {
     const map = {
-      utm_source:   "utmSource1",
-      utm_medium:   "utmMedium1",
-      utm_campaign: "utmCampaign1",
-      campid:       "utmCampid1",
-      utm_campid:   "utmCampid1",
-      gclid:        "gCLID1",
-      gadposition:  "utmGadposition1",
-      gcreative:    "utmGcreative1",
-      gdevice:      "utmGdevice1",
-      gnetwork:     "utmGnetwork1",
-      gkeyword:     "utmGkeyword1",
-      gplacement:   "utmGplacement1",
-      gmatchtype:   "utmGmatchtype1",
-      gtarget:      "utmGtarget1",
-      utm_orgid:    "utmOrgid1"
+      utm_source:   "utmSource1", utm_medium: "utmMedium1", utm_campaign: "utmCampaign1",
+      campid:       "utmCampid1", utm_campid: "utmCampid1", gclid:        "gCLID1",
+      gadposition:  "utmGadposition1", gcreative: "utmGcreative1", gdevice: "utmGdevice1",
+      gnetwork:     "utmGnetwork1",  gkeyword:   "utmGkeyword1",  gplacement: "utmGplacement1",
+      gmatchtype:   "utmGmatchtype1", gtarget:   "utmGtarget1",   utm_orgid: "utmOrgid1"
     };
     const url = new URLSearchParams(window.location.search);
     const ck  = new URLSearchParams(getCookie("_pubweb_utm"));
@@ -106,49 +95,65 @@
     const origin = window.location.origin;
     const cf = form.querySelector('input[name="contentURL1"]');
     if (cf) cf.value = origin + cf.value;
+
     const pf = form.querySelector('input[name="pathName1"]');
     if (pf) pf.value = window.location.href;
+
     const Q = window.location.search.substring(1);
-    form.querySelector('input[name="rFCDMJunkReason1"]')?.value = Q;
-    form.querySelector('input[name="originalUtmquerystring1"]')?.value = Q;
+    const rf = form.querySelector('input[name="rFCDMJunkReason1"]');
+    if (rf) rf.value = Q;
+
+    const oq = form.querySelector('input[name="originalUtmquerystring1"]');
+    if (oq) oq.value = Q;
+
     const uq = form.querySelector('input[name="utmquerystring1"]');
     if (uq) {
       const m = Q.match(/campid.*$/);
       uq.value = m ? m[0] : "";
     }
+
     const tfi = form.querySelector('input[name="formSubmit1"]');
     if (tfi) {
       const ts = new Date();
-      const tsStr =
-        ("0"+(ts.getMonth()+1)).slice(-2)+"/"+
-        ("0"+ts.getDate()).slice(-2)+"/"+
-        ts.getFullYear()+" "+
-        ("0"+ts.getHours()).slice(-2)+":"+
-        ("0"+ts.getMinutes()).slice(-2)+":"+
-        ("0"+ts.getSeconds()).slice(-2);
+      const tsStr = 
+        String(ts.getMonth()+1).padStart(2,'0') + "/" +
+        String(ts.getDate()).padStart(2,'0') + "/" +
+        ts.getFullYear() + " " +
+        String(ts.getHours()).padStart(2,'0') + ":" +
+        String(ts.getMinutes()).padStart(2,'0') + ":" +
+        String(ts.getSeconds()).padStart(2,'0');
       tfi.value = tsStr;
     }
-    form.querySelector('input[name="language"]')?.value = navigator.language || "";
-    const emVal = form.querySelector('input[name="email"]')?.value || "";
-    form.querySelector('input[name="company"]')?.value = emVal.split("@")[1] || "";
-    form.querySelector('input[name="sFDCCanadaEmailOptInOutDate1"]')?.value =
-      new Date().toISOString().split("T")[0];
-    form.querySelector('input[name="sFDCCanadaEmailOptIn1"]')?.value =
-      getCanadaConsent(form);
+
+    const li = form.querySelector('input[name="language"]');
+    if (li) li.value = navigator.language || "";
+
+    const em = form.querySelector('input[name="email"]');
+    const ci = form.querySelector('input[name="company"]');
+    if (ci) ci.value = em ? em.value.split("@").pop() : "";
+
+    const cod = form.querySelector('input[name="sFDCCanadaEmailOptInOutDate1"]');
+    if (cod) cod.value = new Date().toISOString().split("T")[0];
+
+    const ci1 = form.querySelector('input[name="sFDCCanadaEmailOptIn1"]');
+    if (ci1) ci1.value = getCanadaConsent(form);
   }
 
   async function populateUniqueFFID(form) {
     const id = await getUniqueFFID();
     form.querySelectorAll('input[name="uniqueFFID"]').forEach(i => i.value = id);
   }
+
   function populateDomoID(form) {
     const id = getOrCreateDomoID();
     form.querySelectorAll('input[name="domo_id"]').forEach(i => i.value = id);
   }
+
   function populateGaClientId(form) {
     const id = getGaClientId();
     form.querySelectorAll('input[name="g_id"]').forEach(i => i.value = id);
   }
+
   async function populateAll(form) {
     populateUtmFields(form);
     populateDomoID(form);
@@ -158,58 +163,40 @@
 
   // --- VALIDATION ---
   const VALIDATION_RULES = {
-    first_name: { type:"name",  min:2, required:true, messages:{
-      required:"First name is required.",
-      min:"At least 2 chars.",
-      invalid:"Invalid name."
-    }},
-    last_name:  { type:"name",  min:2, required:true, messages:{
-      required:"Last name is required.",
-      min:"At least 2 chars.",
-      invalid:"Invalid name."
-    }},
-    email:      { type:"email", required:true, messages:{
-      required:"Email is required.",
-      invalid:"Bad format.",
-      business:"Use business email."
-    }},
-    phone:      { type:"phone", min:10, required:true, messages:{
-      required:"Phone is required.",
-      min:"At least 10 digits.",
-      invalid:"Invalid phone."
-    }},
-    title:      { type:"title", required:true, messages:{
-      required:"Job title is required.",
-      invalid:"Invalid title."
-    }}
+    first_name: { type:"name", min:2, required:true, messages:{ required:"First name is required.", min:"At least 2 chars.", invalid:"Invalid name." }},
+    last_name:  { type:"name", min:2, required:true, messages:{ required:"Last name is required.", min:"At least 2 chars.", invalid:"Invalid name." }},
+    email:      { type:"email", required:true, messages:{ required:"Email is required.", invalid:"Bad format.", business:"Use business email." }},
+    phone:      { type:"phone", min:10, required:true, messages:{ required:"Phone is required.", min:"At least 10 digits.", invalid:"Invalid phone." }},
+    title:      { type:"title", required:true, messages:{ required:"Job title is required.", invalid:"Invalid title." }}
   };
+
   function validateField(cfg) {
     const v = cfg.element.value.trim();
     let ok = false, err;
     switch (cfg.type) {
       case "name":
         if (!v) err="required";
-        else if (v.length<cfg.min) err="min";
+        else if (v.length < cfg.min) err="min";
         else if (!/^[a-zA-Z\s]+$/.test(v)) err="invalid";
-        else ok=true;
+        else ok = true;
         break;
       case "email":
         if (!v) err="required";
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) err="invalid";
         else if (["gmail.com","yahoo.com","outlook.com","hotmail.com","aol.com","msn.com","ymail.com","comcast.net","live.com","protonmail.com"].includes(v.split("@")[1])) err="business";
-        else ok=true;
+        else ok = true;
         break;
       case "phone":
         const digs = v.replace(/\D/g,"");
         if (!v) err="required";
-        else if (digs.length<cfg.min) err="min";
+        else if (digs.length < cfg.min) err="min";
         else if (!/^(?!\+?(\d)\1+$)\+?\d{8,15}$/.test(v)) err="invalid";
-        else ok=true;
+        else ok = true;
         break;
       case "title":
-        if (!v) err=cfg.required?"required":null;
-        else if (!/^[a-zA-Z\s]+$/.test(v)||/(.)\1{3,}/.test(v)) err="invalid";
-        else ok=true;
+        if (!v) err = cfg.required ? "required" : null;
+        else if (!/^[a-zA-Z\s]+$/.test(v) || /(.)\1{3,}/.test(v)) err="invalid";
+        else ok = true;
         break;
     }
     const ct = cfg.element.parentElement;
@@ -220,17 +207,20 @@
         e.className = "error-message";
         e.textContent = cfg.messages[err];
         ct.insertAdjacentElement("afterend", e);
-      } else nx.textContent = cfg.messages[err];
+      } else {
+        nx.textContent = cfg.messages[err];
+      }
     } else if (nx && nx.classList.contains("error-message")) {
-      nx.remove();
+        nx.remove();
     }
     return ok;
   }
+
   function validateSelect(sel) {
     const v = sel.value;
     const ct = sel.parentElement;
     const nx = ct.nextElementSibling;
-    const name = sel.getAttribute("errorlabel")||sel.name;
+    const name = sel.getAttribute("errorlabel") || sel.name;
     const msg = `Please enter a valid ${name}.`;
     if (!v) {
       if (!nx || !nx.classList.contains("error-message")) {
@@ -238,35 +228,38 @@
         e.className = "error-message";
         e.textContent = msg;
         ct.insertAdjacentElement("afterend", e);
-      } else nx.textContent = msg;
+      } else {
+        nx.textContent = msg;
+      }
       return false;
     } else if (nx && nx.classList.contains("error-message")) {
       nx.remove();
     }
     return true;
   }
+
   function attachValidation(form) {
     Object.entries(VALIDATION_RULES).forEach(([n,r]) => {
       const el = form.querySelector(`[name="${n}"]`);
       if (el) {
-        const cfg = { element:el, type:r.type, min:r.min, required:r.required, messages:r.messages };
+        const cfg = { element: el, type: r.type, min: r.min, required: r.required, messages: r.messages };
         el.addEventListener("blur", () => validateField(cfg));
       }
     });
     form.querySelectorAll("select[required]").forEach(sel => {
       sel.addEventListener("change", () => validateSelect(sel));
-      sel.addEventListener("blur",   () => validateSelect(sel));
+      sel.addEventListener("blur", () => validateSelect(sel));
     });
   }
 
   // --- CONTACT US DYNAMIC FIELDS ---
   function initContactUsDynamic(form) {
-    const elq = form.querySelector('input[name="elqFormName"]')?.value;
-    if (elq !== "website_cta_contactus") return;
-    const sub = form.querySelector('select[name="subject"]');
-    if (!sub) return;
+    const elqName = form.querySelector('input[name="elqFormName"]')?.value;
+    if (elqName !== "website_cta_contactus") return;
+    const subjectSelect = form.querySelector('select[name="subject"]');
+    if (!subjectSelect) return;
     function addFields() {
-      const wrap = sub.closest(".form-input-wrap");
+      const wrap = subjectSelect.closest(".form-input-wrap");
       if (!form.querySelector('div[job-title-wrap]')) {
         wrap.insertAdjacentHTML("afterend", `
   <div job-title-wrap class="form-input-wrap">
@@ -283,7 +276,7 @@
   <div department-wrap class="form-input-wrap">
     <div class="form-input-inner-wrap">
       <select name="department" required class="input-relative" errorlabel="department">
-        <option value="">Department</option><option>BI</option><option>Customer Service &amp; Support</option><option>Engineering/Product Development</option><option>Developer/Engineering</option><option>Human Resources</option><option>IT</option><option>Marketing</option><option>Operations</option><option>Sales</option><option>Finance</option><option>Other</option>
+        <option value="">Department</option><option value="BI">BI</option><option value="Customer Service &amp; Support">Customer Service &amp; Support</option><option value="Engineering/Product Development">Engineering/Product Development</option><option value="Developer/Engineering">Developer/Engineering</option><option value="Human Resources">Human Resources</option><option value="IT">IT</option><option value="Marketing">Marketing</option><option value="Operations">Operations</option><option value="Sales">Sales</option><option value="Finance">Finance</option><option value="Other">Other</option>
       </select>
     </div>
   </div>`);
@@ -294,9 +287,9 @@
       form.querySelector('div[department-wrap]')?.remove();
     }
     function update() {
-      sub.value === "Sales" ? addFields() : removeFields();
+      subjectSelect.value === "Sales" ? addFields() : removeFields();
     }
-    sub.addEventListener("change", update);
+    subjectSelect.addEventListener("change", update);
     form.addEventListener("submit", update);
     update();
   }
@@ -310,43 +303,52 @@
     Object.entries(VALIDATION_RULES).forEach(([n,r]) => {
       if (r.required) {
         const el = form.querySelector(`[name="${n}"]`);
-        if (!validateField({element:el,type:r.type,min:r.min,required:r.required,messages:r.messages})) valid = false;
+        if (!validateField({ element: el, type: r.type, min: r.min, required: r.required, messages: r.messages })) {
+          valid = false;
+        }
       }
     });
     form.querySelectorAll("select[required]").forEach(sel => {
       if (!validateSelect(sel)) valid = false;
     });
-    if (!valid) return console.log("Fix errors");
+    if (!valid) {
+      console.log("Please fix errors and try again.");
+      return;
+    }
 
     await populateAll(form);
     populateSubmissionFields(form);
 
-    const elqName = form.querySelector('input[name="elqFormName"]')?.value;
-    if (elqName === "website_cta_videodemorequest") setUInfoCookie(form);
+    const elqNameDemo = form.querySelector('input[name="elqFormName"]')?.value;
+    if (elqNameDemo === "website_cta_videodemorequest") {
+      setUInfoCookie(form);
+    }
 
-    const payload = new URLSearchParams(new FormData(form));
+    const data = new URLSearchParams(new FormData(form));
     fetch(form.action, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: payload
+      body: data
     })
     .then(res => {
       if (!res.ok) throw new Error(res.status);
-      console.log("[Form] submitted");
-      const ru = form.querySelector('input[name="contentURL1"]')?.value || window.location.origin;
-      window.location.href = ru;
+      console.log("[Form] Eloqua submission successful");
+      const redirectInput = form.querySelector('input[name="contentURL1"]');
+      const url = redirectInput ? redirectInput.value : window.location.origin;
+      window.location.href = url;
     })
-    .catch(err => console.error("[Form] error", err));
+    .catch(err => console.error("[Form] Submission error", err));
   }
 
   // --- INIT ---
+  function initForm(form) {
+    populateAll(form);
+    attachValidation(form);
+    initContactUsDynamic(form);
+    form.addEventListener("submit", handleSubmit);
+  }
   function init() {
-    document.querySelectorAll('form[eloquaform="true"]').forEach(form => {
-      populateAll(form);
-      attachValidation(form);
-      initContactUsDynamic(form);
-      form.addEventListener("submit", handleSubmit);
-    });
+    document.querySelectorAll('form[eloquaform="true"]').forEach(initForm);
   }
   if (document.readyState !== "loading") {
     init();
